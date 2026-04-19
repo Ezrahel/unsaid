@@ -1,3 +1,5 @@
+import { getSupabaseClient } from '@/lib/supabase';
+
 type StoryInput = {
   content: string;
   emotion: string;
@@ -5,96 +7,108 @@ type StoryInput = {
   authorId?: string;
 };
 
-type StoryRecord = {
+type StoryRow = {
   id: number;
   content: string;
   emotion: string;
-  createdAt: string;
-  isPublic: boolean;
-  authorId: string | null;
-  reactions: {
-    like: number;
-    support: number;
-    sad: number;
-  };
+  created_at: string;
+  is_public: boolean;
+  author_id: string | null;
+  reactions_like: number;
+  reactions_support: number;
+  reactions_sad: number;
 };
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
-
-function buildApiUrl(path: string) {
-  if (!apiBaseUrl) {
-    return path;
-  }
-
-  return `${apiBaseUrl.replace(/\/$/, '')}${path}`;
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  const contentType = response.headers.get('content-type') || '';
-  const payload = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(payload?.error || 'Request failed.');
-  }
-
-  if (!contentType.includes('application/json')) {
-    throw new Error(
-      'The stories API returned HTML instead of JSON. Make sure the backend API is running, and if the frontend is hosted separately set VITE_API_BASE_URL to the server URL.',
-    );
-  }
-
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('The stories API returned empty data.');
-  }
-
-  return payload as T;
+function mapStory(row: StoryRow) {
+  return {
+    id: row.id,
+    content: row.content,
+    emotion: row.emotion,
+    createdAt: new Date(row.created_at),
+    isPublic: row.is_public,
+    authorId: row.author_id,
+    reactions: {
+      like: row.reactions_like ?? 0,
+      support: row.reactions_support ?? 0,
+      sad: row.reactions_sad ?? 0,
+    },
+  };
 }
 
 export async function addStory(storyData: StoryInput) {
-  const response = await fetch(buildApiUrl('/api/stories'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(storyData),
-  });
+  const supabase: any = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('stories')
+    .insert({
+      content: storyData.content,
+      emotion: storyData.emotion || 'unspecified',
+      is_public: storyData.isPublic,
+      author_id: storyData.authorId || null,
+    })
+    .select('id')
+    .single();
 
-  return readJson<{ ok: true; id: number | null }>(response);
+  if (error) {
+    throw new Error(error.message || 'Failed to save story.');
+  }
+
+  return { ok: true, id: data.id };
 }
 
 export async function getStories(limit = 20, offset = 0, emotion?: string) {
-  const params = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
-  });
+  const supabase: any = getSupabaseClient();
+  let query = supabase
+    .from('stories')
+    .select(
+      'id, content, emotion, created_at, is_public, author_id, reactions_like, reactions_support, reactions_sad',
+    )
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (emotion) {
-    params.set('emotion', emotion);
+    query = query.eq('emotion', emotion);
   }
 
-  const response = await fetch(buildApiUrl(`/api/stories?${params.toString()}`));
-  const payload = await readJson<{ stories: StoryRecord[] }>(response);
+  const { data, error } = await query;
 
-  if (!Array.isArray(payload.stories)) {
-    throw new Error('The stories API returned an invalid stories list.');
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch stories.');
   }
 
-  return payload.stories.map((story) => ({
-    ...story,
-    createdAt: new Date(story.createdAt),
-  }));
+  return (data || []).map((row) => mapStory(row as StoryRow));
 }
 
 export async function updateReaction(storyId: number, reactionType: 'like' | 'support' | 'sad') {
-  const response = await fetch(buildApiUrl(`/api/stories/${storyId}/reactions`), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ reactionType }),
-  });
+  const supabase: any = getSupabaseClient();
 
-  return readJson<{ ok: true }>(response);
+  const { data: current, error: fetchError } = await supabase
+    .from('stories')
+    .select('id, reactions_like, reactions_support, reactions_sad')
+    .eq('id', storyId)
+    .single();
+
+  if (fetchError || !current) {
+    throw new Error(fetchError?.message || 'Failed to find story.');
+  }
+
+  const updatePayload =
+    reactionType === 'like'
+      ? { reactions_like: (current.reactions_like ?? 0) + 1 }
+      : reactionType === 'support'
+        ? { reactions_support: (current.reactions_support ?? 0) + 1 }
+        : { reactions_sad: (current.reactions_sad ?? 0) + 1 };
+
+  const { error: updateError } = await supabase
+    .from('stories')
+    .update(updatePayload)
+    .eq('id', storyId);
+
+  if (updateError) {
+    throw new Error(updateError.message || 'Failed to update reaction.');
+  }
+
+  return { ok: true };
 }
 
 export const auth = {
