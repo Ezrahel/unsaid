@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
+import { sanitizeStoryHtml } from '@/lib/storySanitizer';
 
 type StoryInput = {
   content: string;
@@ -22,7 +23,7 @@ type StoryRow = {
 function mapStory(row: StoryRow) {
   return {
     id: row.id,
-    content: row.content,
+    content: sanitizeStoryHtml(row.content),
     emotion: row.emotion,
     createdAt: new Date(row.created_at),
     isPublic: row.is_public,
@@ -37,10 +38,11 @@ function mapStory(row: StoryRow) {
 
 export async function addStory(storyData: StoryInput) {
   const supabase: any = getSupabaseClient();
+  const sanitizedContent = sanitizeStoryHtml(storyData.content);
   const { data, error } = await supabase
     .from('stories')
     .insert({
-      content: storyData.content,
+      content: sanitizedContent,
       emotion: storyData.emotion || 'unspecified',
       is_public: storyData.isPublic,
       author_id: storyData.authorId || null,
@@ -81,31 +83,16 @@ export async function getStories(limit = 20, offset = 0, emotion?: string) {
 
 export async function updateReaction(storyId: number, reactionType: 'like' | 'support' | 'sad') {
   const supabase: any = getSupabaseClient();
+  const { error } = await supabase.rpc('increment_story_reaction', {
+    story_id_input: storyId,
+    reaction_type_input: reactionType,
+  });
 
-  const { data: current, error: fetchError } = await supabase
-    .from('stories')
-    .select('id, reactions_like, reactions_support, reactions_sad')
-    .eq('id', storyId)
-    .single();
-
-  if (fetchError || !current) {
-    throw new Error(fetchError?.message || 'Failed to find story.');
-  }
-
-  const updatePayload =
-    reactionType === 'like'
-      ? { reactions_like: (current.reactions_like ?? 0) + 1 }
-      : reactionType === 'support'
-        ? { reactions_support: (current.reactions_support ?? 0) + 1 }
-        : { reactions_sad: (current.reactions_sad ?? 0) + 1 };
-
-  const { error: updateError } = await supabase
-    .from('stories')
-    .update(updatePayload)
-    .eq('id', storyId);
-
-  if (updateError) {
-    throw new Error(updateError.message || 'Failed to update reaction.');
+  if (error) {
+    throw new Error(
+      error.message ||
+        'Failed to update reaction. Make sure the increment_story_reaction SQL function exists in Supabase.',
+    );
   }
 
   return { ok: true };

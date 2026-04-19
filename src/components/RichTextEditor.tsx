@@ -8,6 +8,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { 
   Bold, 
+  Code2,
+  Eraser,
   Italic, 
   Underline as UnderlineIcon, 
   List, 
@@ -15,9 +17,11 @@ import {
   AlignLeft, 
   AlignCenter, 
   AlignRight, 
+  AlignJustify,
   Heading1, 
   Heading2,
   Quote,
+  Strikethrough,
   Type,
   Palette,
   ChevronDown
@@ -97,22 +101,53 @@ const MenuBar = ({ editor }: { editor: any }) => {
     { label: 'DEFAULT', value: null },
     { label: 'TINY', value: '12px' },
     { label: 'SMALL', value: '14px' },
+    { label: 'BODY', value: '16px' },
     { label: 'NORMAL', value: '18px' },
+    { label: 'MEDIUM', value: '20px' },
     { label: 'LARGE', value: '24px' },
     { label: 'X-LARGE', value: '32px' },
+    { label: 'DISPLAY', value: '40px' },
     { label: '2X-LARGE', value: '48px' },
     { label: 'MASSIVE', value: '64px' },
+    { label: 'MONUMENT', value: '72px' },
   ];
 
-  const colors = [
-    { label: 'DEFAULT', value: 'currentColor' },
-    { label: 'SILENCE', value: '#737373' },
-    { label: 'SOUL', value: '#404040' },
-    { label: 'SORROW', value: '#3b82f6' },
-    { label: 'BLOOD', value: '#ef4444' },
-    { label: 'GROWTH', value: '#22c55e' },
-    { label: 'WARNING', value: '#eab308' },
-    { label: 'PURITY', value: '#ffffff' },
+  const colorFamilies = [
+    {
+      label: 'NEUTRALS',
+      colors: [
+        { label: 'DEFAULT', value: 'currentColor' },
+        { label: 'SILENCE', value: '#737373' },
+        { label: 'SOUL', value: '#404040' },
+        { label: 'MIDNIGHT', value: '#0f172a' },
+        { label: 'PURITY', value: '#ffffff' },
+      ],
+    },
+    {
+      label: 'EMBERS',
+      colors: [
+        { label: 'BLOOD', value: '#ef4444' },
+        { label: 'AMBER', value: '#f59e0b' },
+        { label: 'EMBER', value: '#f97316' },
+        { label: 'WARNING', value: '#eab308' },
+      ],
+    },
+    {
+      label: 'TIDES',
+      colors: [
+        { label: 'SORROW', value: '#3b82f6' },
+        { label: 'TIDE', value: '#14b8a6' },
+        { label: 'AURA', value: '#8b5cf6' },
+        { label: 'BLOOM', value: '#ec4899' },
+      ],
+    },
+    {
+      label: 'EARTH',
+      colors: [
+        { label: 'GROWTH', value: '#22c55e' },
+        { label: 'MOSS', value: '#84cc16' },
+      ],
+    },
   ];
 
   const buttons = [
@@ -141,6 +176,12 @@ const MenuBar = ({ editor }: { editor: any }) => {
       label: 'Italic',
     },
     {
+      icon: Strikethrough,
+      onClick: () => editor.chain().focus().toggleStrike().run(),
+      isActive: editor.isActive('strike'),
+      label: 'Strike',
+    },
+    {
       icon: UnderlineIcon,
       onClick: () => editor.chain().focus().toggleUnderline().run(),
       isActive: editor.isActive('underline'),
@@ -151,6 +192,12 @@ const MenuBar = ({ editor }: { editor: any }) => {
       onClick: () => editor.chain().focus().toggleBlockquote().run(),
       isActive: editor.isActive('blockquote'),
       label: 'Quote',
+    },
+    {
+      icon: Code2,
+      onClick: () => editor.chain().focus().toggleCode().run(),
+      isActive: editor.isActive('code'),
+      label: 'Code',
     },
     {
       icon: List,
@@ -184,6 +231,12 @@ const MenuBar = ({ editor }: { editor: any }) => {
       onClick: () => editor.chain().focus().setTextAlign('right').run(),
       isActive: editor.isActive({ textAlign: 'right' }),
       label: 'Align Right',
+    },
+    {
+      icon: AlignJustify,
+      onClick: () => editor.chain().focus().setTextAlign('justify').run(),
+      isActive: editor.isActive({ textAlign: 'justify' }),
+      label: 'Justify',
     },
   ];
 
@@ -220,18 +273,27 @@ const MenuBar = ({ editor }: { editor: any }) => {
             </Button>
           } 
         />
-        <PopoverContent className="nothing-border glass p-3 min-w-[180px]">
-          <div className="grid grid-cols-4 gap-2">
-            {colors.map((color) => (
-              <button
-                key={color.label}
-                onClick={() => editor.chain().focus().setColor(color.value).run()}
-                className="w-8 h-8 rounded-full border border-foreground/10 hover:scale-110 transition-transform flex items-center justify-center p-1"
-                title={color.label}
-                style={{ backgroundColor: color.value === 'currentColor' ? 'transparent' : color.value }}
-              >
-                {color.value === 'currentColor' && <Type className="h-3 w-3" />}
-              </button>
+        <PopoverContent className="nothing-border glass p-3 min-w-[240px]">
+          <div className="space-y-3">
+            {colorFamilies.map((family) => (
+              <div key={family.label}>
+                <div className="mb-2 font-mono text-[9px] uppercase tracking-[0.25em] opacity-40">
+                  {family.label}
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {family.colors.map((color) => (
+                    <button
+                      key={color.label}
+                      onClick={() => editor.chain().focus().setColor(color.value).run()}
+                      className="w-8 h-8 rounded-full border border-foreground/10 hover:scale-110 transition-transform flex items-center justify-center p-1"
+                      title={color.label}
+                      style={{ backgroundColor: color.value === 'currentColor' ? 'transparent' : color.value }}
+                    >
+                      {color.value === 'currentColor' && <Type className="h-3 w-3" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </PopoverContent>
@@ -270,6 +332,18 @@ const MenuBar = ({ editor }: { editor: any }) => {
           <btn.icon className="h-4 w-4" />
         </Button>
       ))}
+
+      <Separator orientation="vertical" className="h-6 mx-1 bg-foreground/10" />
+
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+        className="h-8 w-8 nothing-border opacity-40 hover:opacity-100 transition-colors"
+        title="Clear Formatting"
+      >
+        <Eraser className="h-4 w-4" />
+      </Button>
     </div>
   );
 };
@@ -323,6 +397,12 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
           padding-left: 1.5rem;
           opacity: 0.6;
           font-style: italic;
+        }
+        .ProseMirror code {
+          background: rgba(0, 0, 0, 0.06);
+          padding: 0.15rem 0.35rem;
+          border-radius: 0.25rem;
+          font-size: 0.9em;
         }
         .ProseMirror ul {
           list-style-type: disc;

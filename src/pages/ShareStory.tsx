@@ -141,6 +141,12 @@ const ShareStory = () => {
                   placeholder="START POURING YOUR HEART OUT HERE..."
                 />
 
+                <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono uppercase tracking-[0.25em] opacity-35">
+                  <span>Customize with expanded color families</span>
+                  <span className="hidden md:inline">/</span>
+                  <span>Use code, strike, justify, and clear formatting</span>
+                </div>
+
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-8 border-t border-foreground/5">
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3 opacity-30">
