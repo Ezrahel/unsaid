@@ -30,12 +30,11 @@ const Home = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotten, setIsForgotten] = useState(false);
   const [splineLoaded, setSplineLoaded] = useState(false);
-  const [splineFailed, setSplineFailed] = useState(false);
+  const [splineReady, setSplineReady] = useState(false);
+  const [checkingSpline, setCheckingSpline] = useState(true);
   const [tickerIndex, setTickerIndex] = useState(0);
   const calLink = import.meta.env.VITE_CAL_LINK || "username/60min";
-  
-  // Use a stable URL for Spline to prevent buffer errors on re-renders
-  const splineScene = "https://prod.spline.design/6Wq1Q7YInESZgap9/scene.splinecode";
+  const splineScene = import.meta.env.VITE_SPLINE_SCENE_URL?.trim() || '';
 
   useEffect(() => {
     (async function () {
@@ -52,6 +51,50 @@ const Home = () => {
       });
     })();
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function verifySplineScene() {
+      if (!splineScene) {
+        if (isActive) {
+          setSplineReady(false);
+          setCheckingSpline(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(splineScene, { method: 'HEAD' });
+
+        if (!response.ok) {
+          throw new Error(`Spline scene unavailable: ${response.status}`);
+        }
+
+        if (isActive) {
+          setSplineReady(true);
+        }
+      } catch (error) {
+        console.warn('Spline scene check failed, using fallback visual.', error);
+        if (isActive) {
+          setSplineReady(false);
+        }
+      } finally {
+        if (isActive) {
+          setCheckingSpline(false);
+        }
+      }
+    }
+
+    setSplineLoaded(false);
+    setCheckingSpline(true);
+    setSplineReady(false);
+    verifySplineScene();
+
+    return () => {
+      isActive = false;
+    };
+  }, [splineScene]);
 
   const tickerMessages = [
     "A regret from London dissolved.",
@@ -104,28 +147,30 @@ const Home = () => {
     }
   };
 
+  const heroFallback = (
+    <div className="w-full h-full bg-background flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 dot-matrix opacity-[0.05]" />
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.1, 1],
+          opacity: [0.1, 0.2, 0.1]
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="w-[800px] h-[800px] rounded-full bg-foreground/5 blur-3xl"
+      />
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-widest opacity-20">
+        Visualizer Offline
+      </div>
+    </div>
+  );
+
   return (
     <main className="overflow-x-hidden">
       {/* Hero Section */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
         <div className="absolute inset-0 z-0 opacity-40">
-          <ErrorBoundary fallback={
-            <div className="w-full h-full bg-background flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 dot-matrix opacity-[0.05]" />
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.1, 1],
-                  opacity: [0.1, 0.2, 0.1]
-                }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="w-[800px] h-[800px] rounded-full bg-foreground/5 blur-3xl"
-              />
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-widest opacity-20">
-                Visualizer Offline
-              </div>
-            </div>
-          }>
-            {!splineFailed && (
+          <ErrorBoundary fallback={heroFallback}>
+            {splineReady ? (
               <Suspense fallback={
                 <div className="w-full h-full bg-background/5 flex items-center justify-center">
                   <div className="w-1 h-1 bg-foreground animate-ping" />
@@ -136,19 +181,21 @@ const Home = () => {
                   scene={splineScene} 
                   onLoad={() => setSplineLoaded(true)}
                   onError={(error) => {
-                    setSplineFailed(true);
+                    setSplineReady(false);
                     console.error("Spline failed to load", error);
                   }}
                   style={{ width: '100%', height: '100%' }}
                 />
               </Suspense>
+            ) : (
+              heroFallback
             )}
           </ErrorBoundary>
-          {!splineLoaded && !splineFailed && (
+          {checkingSpline || (splineReady && !splineLoaded) ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-1 h-1 bg-foreground animate-ping" />
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-4xl">

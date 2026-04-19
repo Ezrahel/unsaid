@@ -4,6 +4,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { addStory, incrementReaction, listStories } from './database.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,6 +85,77 @@ app.post('/api/contact', async (req, res) => {
   } catch (error) {
     console.error('Failed to send contact email:', error);
     return res.status(500).json({ error: 'Failed to send your message right now.' });
+  }
+});
+
+app.get('/api/stories', async (req, res) => {
+  const limit = Number.parseInt(String(req.query.limit ?? '20'), 10);
+  const offset = Number.parseInt(String(req.query.offset ?? '0'), 10);
+  const emotion =
+    typeof req.query.emotion === 'string' && req.query.emotion.trim()
+      ? req.query.emotion.trim()
+      : undefined;
+
+  try {
+    const stories = await listStories({
+      limit: Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 100) : 20,
+      offset: Number.isFinite(offset) ? Math.max(offset, 0) : 0,
+      emotion,
+    });
+
+    return res.status(200).json({ stories });
+  } catch (error) {
+    console.error('Failed to fetch stories:', error);
+    return res.status(500).json({ error: 'Failed to fetch stories.' });
+  }
+});
+
+app.post('/api/stories', async (req, res) => {
+  const content = typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+  const emotion = typeof req.body?.emotion === 'string' ? req.body.emotion.trim() : 'unspecified';
+  const isPublic = Boolean(req.body?.isPublic);
+  const authorId =
+    typeof req.body?.authorId === 'string' && req.body.authorId.trim()
+      ? req.body.authorId.trim()
+      : undefined;
+
+  if (!content) {
+    return res.status(400).json({ error: 'Story content is required.' });
+  }
+
+  try {
+    const id = await addStory({
+      content,
+      emotion: emotion || 'unspecified',
+      isPublic,
+      authorId,
+    });
+
+    return res.status(201).json({ ok: true, id });
+  } catch (error) {
+    console.error('Failed to save story:', error);
+    return res.status(500).json({ error: 'Failed to save story.' });
+  }
+});
+
+app.post('/api/stories/:storyId/reactions', async (req, res) => {
+  const storyId = Number.parseInt(req.params.storyId, 10);
+  const reactionType = typeof req.body?.reactionType === 'string' ? req.body.reactionType : '';
+
+  if (!Number.isInteger(storyId) || storyId <= 0) {
+    return res.status(400).json({ error: 'Invalid story id.' });
+  }
+
+  try {
+    await incrementReaction(storyId, reactionType);
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid reaction type') {
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.error('Failed to update reaction:', error);
+    return res.status(500).json({ error: 'Failed to update reaction.' });
   }
 });
 

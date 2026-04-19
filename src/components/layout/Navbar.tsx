@@ -96,7 +96,12 @@ const Navbar = () => {
         
         {/* Mobile menu trigger */}
         <div className="lg:hidden flex items-center gap-4">
-          <FeedbackModal />
+          <Link
+            to="/share-story"
+            className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity"
+          >
+            Share Your Story
+          </Link>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger render={
                 <Button variant="ghost" size="icon" className="nothing-border">
