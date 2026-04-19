@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import express from 'express';
+import net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
@@ -29,6 +30,32 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function isPortAvailable(portToCheck) {
+  return new Promise((resolve) => {
+    const tester = net.createServer();
+
+    tester.once('error', (error) => {
+      resolve(error.code === 'EADDRINUSE' ? false : false);
+    });
+
+    tester.once('listening', () => {
+      tester.close(() => resolve(true));
+    });
+
+    tester.listen(portToCheck);
+  });
+}
+
+async function findOpenPort(startPort, attempts = 10) {
+  for (let candidate = startPort; candidate < startPort + attempts; candidate += 1) {
+    if (await isPortAvailable(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`No open port found between ${startPort} and ${startPort + attempts - 1}.`);
 }
 
 app.post('/api/contact', async (req, res) => {
@@ -160,6 +187,8 @@ app.post('/api/stories/:storyId/reactions', async (req, res) => {
 });
 
 async function start() {
+  const resolvedPort = isProduction ? port : await findOpenPort(port);
+
   if (!isProduction) {
     const vite = await createViteServer({
       root: rootDir,
@@ -178,8 +207,12 @@ async function start() {
     });
   }
 
-  app.listen(port, () => {
-    console.log(`UNSAID server listening on http://localhost:${port}`);
+  app.listen(resolvedPort, () => {
+    if (!isProduction && resolvedPort !== port) {
+      console.log(`Port ${port} is busy, using http://localhost:${resolvedPort} instead.`);
+    }
+
+    console.log(`UNSAID server listening on http://localhost:${resolvedPort}`);
   });
 }
 

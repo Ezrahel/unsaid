@@ -20,10 +20,19 @@ type StoryRecord = {
 };
 
 async function readJson<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') || '';
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(payload?.error || 'Request failed.');
+  }
+
+  if (!contentType.includes('application/json')) {
+    throw new Error('The stories API returned an unexpected response.');
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('The stories API returned empty data.');
   }
 
   return payload as T;
@@ -53,6 +62,10 @@ export async function getStories(limit = 20, offset = 0, emotion?: string) {
 
   const response = await fetch(`/api/stories?${params.toString()}`);
   const payload = await readJson<{ stories: StoryRecord[] }>(response);
+
+  if (!Array.isArray(payload.stories)) {
+    throw new Error('The stories API returned an invalid stories list.');
+  }
 
   return payload.stories.map((story) => ({
     ...story,
