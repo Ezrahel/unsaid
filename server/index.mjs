@@ -16,8 +16,37 @@ const app = express();
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const CONTACT_RECIPIENT = 'unsaidburden@gmail.com';
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(express.json({ limit: '1mb' }));
+app.use((req, res, next) => {
+  const requestOrigin = req.headers.origin;
+
+  if (!requestOrigin) {
+    next();
+    return;
+  }
+
+  const allowAnyDevOrigin = !isProduction && allowedOrigins.length === 0;
+  const isAllowedOrigin = allowAnyDevOrigin || allowedOrigins.includes(requestOrigin);
+
+  if (isAllowedOrigin) {
+    res.header('Access-Control-Allow-Origin', requestOrigin);
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(isAllowedOrigin ? 204 : 403);
+    return;
+  }
+
+  next();
+});
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
