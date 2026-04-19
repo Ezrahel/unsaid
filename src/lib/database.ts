@@ -19,6 +19,16 @@ type StoryRecord = {
   };
 };
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+
+function buildApiUrl(path: string) {
+  if (!apiBaseUrl) {
+    return path;
+  }
+
+  return `${apiBaseUrl.replace(/\/$/, '')}${path}`;
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') || '';
   const payload = await response.json().catch(() => null);
@@ -28,7 +38,9 @@ async function readJson<T>(response: Response): Promise<T> {
   }
 
   if (!contentType.includes('application/json')) {
-    throw new Error('The stories API returned an unexpected response.');
+    throw new Error(
+      'The stories API returned HTML instead of JSON. Make sure the backend API is running, and if the frontend is hosted separately set VITE_API_BASE_URL to the server URL.',
+    );
   }
 
   if (!payload || typeof payload !== 'object') {
@@ -39,7 +51,7 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export async function addStory(storyData: StoryInput) {
-  const response = await fetch('/api/stories', {
+  const response = await fetch(buildApiUrl('/api/stories'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -60,7 +72,7 @@ export async function getStories(limit = 20, offset = 0, emotion?: string) {
     params.set('emotion', emotion);
   }
 
-  const response = await fetch(`/api/stories?${params.toString()}`);
+  const response = await fetch(buildApiUrl(`/api/stories?${params.toString()}`));
   const payload = await readJson<{ stories: StoryRecord[] }>(response);
 
   if (!Array.isArray(payload.stories)) {
@@ -74,7 +86,7 @@ export async function getStories(limit = 20, offset = 0, emotion?: string) {
 }
 
 export async function updateReaction(storyId: number, reactionType: 'like' | 'support' | 'sad') {
-  const response = await fetch(`/api/stories/${storyId}/reactions`, {
+  const response = await fetch(buildApiUrl(`/api/stories/${storyId}/reactions`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
