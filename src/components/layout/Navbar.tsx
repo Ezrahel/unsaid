@@ -104,8 +104,8 @@ const Navbar = () => {
                 </Button>
               } 
             />
-            <SheetContent side="right" className="nothing-border glass w-[280px] sm:w-[350px]">
-              <SheetHeader className="text-left mb-12">
+            <SheetContent side="right" className="nothing-border glass w-[280px] pl-6 pr-4 sm:w-[350px] sm:px-6">
+              <SheetHeader className="text-left mb-12 px-0">
                 <SheetTitle className="font-heading text-3xl tracking-tighter">UNSAID</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-8 text-xs font-mono uppercase tracking-widest mt-8">

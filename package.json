@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "tsx watch server/index.mjs",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "NODE_ENV=production node server/index.mjs",
+    "start": "NODE_ENV=production node server/index.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },

@@ -277,7 +277,9 @@ const MenuBar = ({ editor }: { editor: any }) => {
 export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps) => {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        underline: false,
+      }),
       Underline,
       TextStyle,
       Color,

@@ -1,4 +1,5 @@
 import initSqlJs from 'sql.js';
+import sqlWasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url';
 
 // Initialize SQLite database
 let SQL: any;
@@ -7,7 +8,13 @@ let db: any;
 export async function initDatabase() {
   if (!SQL) {
     SQL = await initSqlJs({
-      locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+      locateFile: (file: string) => {
+        if (file === 'sql-wasm-browser.wasm' || file === 'sql-wasm.wasm') {
+          return sqlWasmUrl;
+        }
+
+        return file;
+      }
     });
   }
 
@@ -107,18 +114,20 @@ export async function addStory(storyData: {
   }
 }
 
-export async function getStories(limit: number = 20, offset: number = 0) {
+export async function getStories(limit: number = 20, offset: number = 0, emotion?: string) {
   const database = await initDatabase();
   try {
-    const stmt = database.prepare(`
+    const query = `
       SELECT id, content, emotion, created_at, is_public, author_id,
              reactions_like, reactions_support, reactions_sad
       FROM stories
       WHERE is_public = 1
+      ${emotion ? 'AND emotion = ?' : ''}
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
-    `);
-    stmt.bind([limit, offset]);
+    `;
+    const stmt = database.prepare(query);
+    stmt.bind(emotion ? [emotion, limit, offset] : [limit, offset]);
     const results = [];
     while (stmt.step()) {
       const row = stmt.getAsObject();

@@ -147,6 +147,7 @@ const CommunityEchoes = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -215,11 +216,12 @@ const CommunityEchoes = () => {
       setLoadingMore(true);
     } else {
       setLoading(true);
+      setLoadError(null);
     }
 
     try {
       const currentOffset = isLoadMore ? offset : 0;
-      const fetchedStories = await getStories(PAGE_SIZE, currentOffset);
+      const fetchedStories = await getStories(PAGE_SIZE, currentOffset, filter ?? undefined);
       
       if (isLoadMore) {
         setStories(prev => [...prev, ...fetchedStories]);
@@ -234,6 +236,7 @@ const CommunityEchoes = () => {
       }
     } catch (error) {
       console.error("Error fetching stories:", error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to fetch stories');
       setLoading(false);
       setLoadingMore(false);
     }
@@ -312,13 +315,12 @@ const CommunityEchoes = () => {
             <div className="w-1 h-1 bg-foreground animate-ping mb-4" />
             <span className="font-mono text-[10px] uppercase tracking-widest">Gathering echoes...</span>
           </div>
-        ) : indexError ? (
+        ) : loadError ? (
           <div className="flex flex-col items-center justify-center py-32 text-center max-w-md mx-auto">
             <AlertCircle className="w-12 h-12 mb-4 text-red-400 opacity-40" />
-            <h3 className="text-xl mb-2 font-mono uppercase tracking-widest">Protocol Setup Required</h3>
+            <h3 className="text-xl mb-2 font-mono uppercase tracking-widest">Unable to Gather Echoes</h3>
             <p className="text-xs opacity-60 leading-relaxed font-mono">
-              The database indexing is still being finalized by the system. 
-              Please check back in a few minutes while the echoes are being organized.
+              {loadError}
             </p>
           </div>
         ) : stories.length > 0 ? (

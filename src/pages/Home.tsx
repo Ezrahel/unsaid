@@ -15,18 +15,22 @@ import {
   Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Spline from '@splinetool/react-spline';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { getCalApi } from "@calcom/embed-react";
+import { toast } from 'sonner';
 
 const Home = () => {
   const [thought, setThought] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotten, setIsForgotten] = useState(false);
   const [splineLoaded, setSplineLoaded] = useState(false);
+  const [splineFailed, setSplineFailed] = useState(false);
   const [tickerIndex, setTickerIndex] = useState(0);
   const calLink = import.meta.env.VITE_CAL_LINK || "username/60min";
   
@@ -64,19 +68,40 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleUnburden = () => {
-    if (!thought.trim()) return;
+  const handleUnburden = async () => {
+    if (!thought.trim() || !contactEmail.trim()) return;
+
     setIsSubmitting(true);
-    
-    // Simulate the "unburdening" process
-    setTimeout(() => {
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: contactEmail,
+          message: thought,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to transmit your message.');
+      }
+
+      toast.success('Your message has been delivered.');
       setIsSubmitting(false);
       setIsForgotten(true);
       setThought('');
-      
-      // Reset after animation
+      setContactEmail('');
+
       setTimeout(() => setIsForgotten(false), 3000);
-    }, 2000);
+    } catch (error) {
+      setIsSubmitting(false);
+      toast.error(error instanceof Error ? error.message : 'Failed to transmit your message.');
+    }
   };
 
   return (
@@ -100,21 +125,26 @@ const Home = () => {
               </div>
             </div>
           }>
-            <Suspense fallback={
-              <div className="w-full h-full bg-background/5 flex items-center justify-center">
-                <div className="w-1 h-1 bg-foreground animate-ping" />
-              </div>
-            }>
-              <Spline 
-                key="spline-hero"
-                scene={splineScene} 
-                onLoad={() => setSplineLoaded(true)}
-                onError={() => console.error("Spline failed to load")}
-                style={{ width: '100%', height: '100%' }}
-              />
-            </Suspense>
+            {!splineFailed && (
+              <Suspense fallback={
+                <div className="w-full h-full bg-background/5 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-foreground animate-ping" />
+                </div>
+              }>
+                <Spline 
+                  key="spline-hero"
+                  scene={splineScene} 
+                  onLoad={() => setSplineLoaded(true)}
+                  onError={(error) => {
+                    setSplineFailed(true);
+                    console.error("Spline failed to load", error);
+                  }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </Suspense>
+            )}
           </ErrorBoundary>
-          {!splineLoaded && (
+          {!splineLoaded && !splineFailed && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-1 h-1 bg-foreground animate-ping" />
             </div>
@@ -293,6 +323,14 @@ const Home = () => {
                   </p>
 
                   <div className="space-y-6">
+                    <Input
+                      type="email"
+                      required
+                      placeholder="YOUR_EMAIL_ADDRESS"
+                      className="h-14 bg-foreground/5 nothing-border focus:ring-0 text-sm font-mono placeholder:opacity-20 px-6 uppercase tracking-[0.2em]"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                    />
                     <Textarea 
                       placeholder="POUR OUT YOUR MIND HERE..."
                       className="min-h-[200px] bg-foreground/5 nothing-border focus:ring-0 text-lg font-mono placeholder:opacity-20 resize-none p-6"
@@ -302,7 +340,7 @@ const Home = () => {
                     
                     <Button 
                       onClick={handleUnburden}
-                      disabled={!thought.trim() || isSubmitting}
+                      disabled={!thought.trim() || !contactEmail.trim() || isSubmitting}
                       className="w-full h-16 bg-foreground text-background font-mono tracking-[0.3em] text-sm hover:bg-foreground/90 disabled:opacity-20"
                     >
                       {isSubmitting ? "PURGING..." : "UNBURDEN"}
