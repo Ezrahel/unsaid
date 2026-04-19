@@ -12,7 +12,7 @@ const Footer = () => {
             <span className="font-heading text-lg tracking-tighter">UNSAID</span>
           </div>
           <p className="font-mono text-[10px] opacity-40 uppercase tracking-widest">
-            © 2024 UNSAID PLATFORM. SOUL HEALING THROUGH CONFIDENTIALITY.
+            © 2026 UNSAID PLATFORM. SOUL HEALING THROUGH CONFIDENTIALITY.
           </p>
         </div>
         
