@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">UNSAID favicon</title>
+  <desc id="desc">A private message icon with a hidden whisper inside.</desc>
+  <rect width="64" height="64" fill="#0a0a0a"/>
+  <path d="M14 18h36v23H31l-9 9v-9H14V18Z" fill="none" stroke="#f5f5f5" stroke-width="4" stroke-linejoin="miter"/>
+  <path d="M24 27v7c0 4.418 3.582 8 8 8s8-3.582 8-8v-7" fill="none" stroke="#f5f5f5" stroke-width="4" stroke-linecap="square"/>
+  <circle cx="32" cy="24" r="2.5" fill="#f5f5f5"/>
+</svg>
