@@ -78,7 +78,7 @@ export async function getStories(limit = 20, offset = 0, emotion?: string) {
     throw new Error(error.message || 'Failed to fetch stories.');
   }
 
-  return (data || []).map((row) => mapStory(row as StoryRow));
+  return (data || []).map((row: StoryRow) => mapStory(row));
 }
 
 export async function updateReaction(storyId: number, reactionType: 'like' | 'support' | 'sad') {
